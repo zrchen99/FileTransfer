@@ -2,6 +2,15 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 
 int main(int argc, char *argv[]){
     if (argc != 3){
@@ -14,7 +23,7 @@ int main(int argc, char *argv[]){
     struct sockaddr_in server_addr;
 
     char server_message[1024], client_message[1024], filename[FILENAME_MAX];
-    int server_struct_length = sizeof(server_addr);
+    socklen_t server_struct_length = sizeof(server_addr);
 
     memset(server_message, '\0', sizeof(server_message));
     memset(client_message, '\0', sizeof(client_message));
@@ -35,25 +44,18 @@ int main(int argc, char *argv[]){
     
     // Get input from the user:
     printf("Enter the message as follow: ftp filename\n");
-    fgets(client_message, sizeof(client_message), stdin);
-    
+    char command[100];
+    scanf("%s", command);
+    scanf("%s", filename);
 
-    // Check the format of user input and get filename
-    if(strncmp(client_message, "ftp filename", 4) != 0){
-        printf("User input is in wrong format");
-        return -1;
+    if (strcmp(command, "ftp") != 0)
+    {
+        printf("User input wrong format: ftp filename\n");
     }
-    strncpy(filename, client_message+4, sizeof(client_message));
 
-    // Check is the file exist
-    FILE *file;
-    if(file = fopen(filename, "r")){
-        // File exist
-        fclose(file);
-    }
-    else{
-        //File doesn't exist
-        printf("The file doesn't exist.\n");
+    if (access(filename, F_OK) == -1)
+    {
+        printf("The file doesn't exist\n");
         return -1;
     }
 
@@ -70,9 +72,8 @@ int main(int argc, char *argv[]){
         printf("Error while receiving server's msg\n");
         return -1;
     }
-
     
-    if(strcmp(server_message, "yes")){
+    if(strcmp(server_message, "yes") == 0){
         printf("Server's response: %s\n", server_message);
         printf("A file transfer can start.\n");
     }
