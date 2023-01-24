@@ -11,58 +11,60 @@
 
 int main (int argc, char *argv[]) {
     if (argc != 2){
-        printf("server <UDP listen port>\n");
+        printf("server <server port>\n");
         return -1;
     }
 
     int port = atoi(argv[1]);
-    int socketfd;
-    struct sockaddr_in server_info, client_info;
-    char server_msg[4096], client_msg[4096];
-    socklen_t client_len = sizeof(client_info);
 
-    // Clean buffers:
-    memset(server_msg, '\0', sizeof(server_msg));
-    memset(client_msg, '\0', sizeof(client_msg));
-    
-    /* socket initialization */
-    socketfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (socketfd < 0){
-        printf("Error with socket file descriptor creation.\n");
+    int socket_desc;
+    struct sockaddr_in server_addr, client_addr;
+    char server_message[1024], client_message[1024];
+    socklen_t client_struct_length = sizeof(client_addr);
+
+    memset(server_message, '\0', sizeof(server_message));
+    memset(client_message, '\0', sizeof(client_message));
+
+
+    if(socket_desc = socket(AF_INET, SOCK_DGRAM, 0)<0){
+        printf("Error: socket()\n");
         return -1;
     }
 
-    /* IP and Port number */
-    server_info.sin_family = AF_INET;
-    server_info.sin_port = htons(port);
-    server_info.sin_addr.s_addr = htonl(INADDR_ANY);
+    // Set port and IP
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(port);
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    /* socket binding */
-    int bind_res = bind(socketfd, (struct sockaddr*)&server_info, sizeof(server_info));
-    if (bind_res < 0){
-        printf("Error with bind. Try with different port num.\n");
+    // Binding
+
+    if(bind(socket_desc, (struct sockaddr*)&server_addr, sizeof(server_addr))<0){
+        printf("Error: bind()\n");
         return -1;
     }
 
-    /* Listen and Receive message */
-    long recv_size = recvfrom(socketfd, client_msg, sizeof(client_msg), 0, (struct sockaddr*)&client_info, &client_len);
-    if (recv_size < 0){
-        printf("Message Receive Error.\n");
+    // Receive the server's response:
+    if(recvfrom(socket_desc, client_message, sizeof(client_message), 0,
+         (struct sockaddr*)&client_addr, &client_struct_length) < 0){
+        printf("Error while receiving server's msg\n");
         return -1;
     }
 
-    /* Respond to Client */
-    bool response = strcmp(client_msg, "ftp");
-    if (response) strcpy(server_msg, "yes");
-    else strcpy(server_msg, "no");
-
-    long send_size = sendto(socketfd, server_msg, strlen(server_msg), 0, (struct sockaddr*)&client_info, client_len);
-    if (send_size < 0){
-        printf("Message Sending Error.\n");
-        return -1;
+    // Respond to Client
+    if(strcmp(client_message, "ftp")){
+        strcpy(server_message, "yes");
+    }
+    else{
+        strcpy(server_message, "no");
     }
 
-    close(socketfd);
 
+    // Send the message to client:
+    if(sendto(socket_desc, server_message, strlen(server_message), 0,
+         (struct sockaddr*)&client_addr, client_struct_length) < 0){
+        printf("Unable to send message\n");
+        return -1;
+    }
+    close(socket_desc);
     return 0;
 }
