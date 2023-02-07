@@ -45,15 +45,16 @@ char* packet_to_string(struct packet* packet, char* result) {
     memcpy(result + cursor, packet -> filedata, sizeof(char) * 1000);
 }
 
+
 struct packet *message_to_packet(char *message){
-    struct packet *new_packet = (struct packet*)malloc(sizeof(struct packet));
+    struct packet *new_packet = malloc(sizeof(struct packet));
     unsigned int total_frag, frag_no, size;
     char filename[FILENAME_MAX];
-    sscanf(message, "%d:%d:%d:%s:[.]", &total_frag, &frag_no, &size, filename);
+    sscanf(message, "%d:%d:%d:%[^:]", &total_frag, &frag_no, &size, filename);
 
-    new_packet->total_frag = total_frag;
-    new_packet->frag_no = frag_no;
-    new_packet->size = size;
+    new_packet->total_frag = (unsigned int)total_frag;
+    new_packet->frag_no = (unsigned int)frag_no;
+    new_packet->size = (unsigned int)size;
     new_packet->filename = malloc(strlen(filename) + 1);//plus one for null terminator
     strcpy(new_packet->filename, filename);
     
@@ -64,18 +65,11 @@ struct packet *message_to_packet(char *message){
     start = strchr(start, ':') + 1;
     start = strchr(start, ':') + 1;
     memcpy(new_packet->filedata, start, new_packet->size);
+    return new_packet;
     
 }
 
 void create_ack_message(struct packet *curr_packet, char *server_message){
     memset(server_message, '\0', sizeof(server_message));
-    strcat(server_message, curr_packet->total_frag+'0');
-    strcat(server_message, ":");
-    strcat(server_message, curr_packet->frag_no+'0');
-    strcat(server_message, ":");
-    strcat(server_message, sizeof("ACK"));
-    strcat(server_message, ":");
-    strcat(server_message, curr_packet->filename);
-    strcat(server_message, ":");
-    strcat(server_message, "ACK");
+    sprintf(server_message, "%u:%u:%u:%s:ACK", curr_packet->total_frag, curr_packet->frag_no, curr_packet->size, curr_packet->filename);
 }

@@ -9,47 +9,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-
-struct packet {  
-    unsigned int total_frag;  
-    unsigned int frag_no; 
-    unsigned int size; 
-    char* filename; 
-    char filedata[1000];  
-} packet;
-
-struct packet *message_to_packet(char *message){
-    struct packet *new_packet = malloc(sizeof(packet));
-    unsigned int total_frag, frag_no, size;
-    char filename[FILENAME_MAX];
-    sscanf(message, "%d:%d:%d:%[^:]", &total_frag, &frag_no, &size, filename);
-
-    new_packet->total_frag = total_frag;
-    new_packet->frag_no = frag_no;
-    new_packet->size = size;
-    new_packet->filename = malloc(strlen(filename) + 1);//plus one for null terminator
-    strcpy(new_packet->filename, filename);
-    
-    const char *start = strchr(message, ':') + 1;
-    start = strchr(start, ':') + 1;
-    start = strchr(start, ':') + 1;
-    start = strchr(start, ':') + 1;
-    memcpy(packet->filedata, start, packet->size);
-    
-}
-
-void create_ack_message(struct packet *curr_packet, char *server_message){
-    memset(server_message, '\0', sizeof(server_message));
-    strcat(server_message, curr_packet->total_frag+'0');
-    strcat(server_message, ":");
-    strcat(server_message, curr_packet->frag_no+'0');
-    strcat(server_message, ":");
-    strcat(server_message, sizeof("ACK"));
-    strcat(server_message, ":");
-    strcat(server_message, curr_packet->filename);
-    strcat(server_message, ":");
-    strcat(server_message, "ACK");
-}
+#include "packet.h"
 
 int main (int argc, char *argv[]) {
     if (argc != 2){
@@ -125,7 +85,7 @@ int main (int argc, char *argv[]) {
         fwrite(curr_packet->filedata, sizeof(char), curr_packet->size, fptr);
 
         // ACK
-        createPacket(&curr_packet, server_message);
+        create_ack_message(&curr_packet, server_message);
 
         // ACK sending
         if(sendto(socket_desc, server_message, strlen(server_message), 0,
@@ -135,7 +95,7 @@ int main (int argc, char *argv[]) {
         }
 
         // end condition
-        if (curr_packet.frag_no == curr_packet.total_frag) {
+        if (curr_packet->frag_no == curr_packet->total_frag) {
             printf("Completion!\n");
             close(fptr);
             free(curr_packet);
