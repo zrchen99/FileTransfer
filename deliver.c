@@ -66,7 +66,7 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
         if (recvfrom(socket_desc, server_message, sizeof(server_message), 0,
          (struct sockaddr*)&server_addr, sizeof(server_addr) < 0)){
             printf("Error while receiving server's msg\n");
-            return -1;
+            exit(1);
         }
         clock_t end = clock();
         float seconds = (float)(end - start) / CLOCKS_PER_SEC;
