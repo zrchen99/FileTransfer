@@ -9,8 +9,42 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "packet.h"
 
+struct packet {  
+    unsigned int total_frag;  
+    unsigned int frag_no; 
+    unsigned int size; 
+    char* filename; 
+    char filedata[1000];  
+};
+
+struct packet *message_to_packet(char *message){
+    struct packet *new_packet = malloc(sizeof(struct packet));
+    unsigned int total_frag, frag_no, size;
+    char filename[FILENAME_MAX];
+    sscanf(message, "%d:%d:%d:%[^:]", &total_frag, &frag_no, &size, filename);
+
+    new_packet->total_frag = (unsigned int)total_frag;
+    new_packet->frag_no = (unsigned int)frag_no;
+    new_packet->size = (unsigned int)size;
+    new_packet->filename = malloc(strlen(filename) + 1);//plus one for null terminator
+    strcpy(new_packet->filename, filename);
+    
+    // we cannot use strrchr to find the last ":" 
+    // since we cannot assume the data doesn't contain any ":"
+    const char *start = strchr(message, ':') + 1;
+    start = strchr(start, ':') + 1;
+    start = strchr(start, ':') + 1;
+    start = strchr(start, ':') + 1;
+    memcpy(new_packet->filedata, start, new_packet->size);
+    return new_packet;
+    
+}
+
+// void create_ack_message(struct packet *curr_packet, char *server_message){
+//     memset(server_message, '\0', sizeof(server_message));
+//     sprintf(server_message, "%u:%u:%u:%s:ACK", curr_packet->total_frag, curr_packet->frag_no, curr_packet->size, curr_packet->filename);
+// }
 int main (int argc, char *argv[]) {
     if (argc != 2){
         printf("server <server port>\n");
@@ -18,7 +52,6 @@ int main (int argc, char *argv[]) {
     }
 
     int port = atoi(argv[1]);
-    printf(argv[1]);
 
     int socket_desc;
     struct sockaddr_in server_addr, client_addr;
@@ -68,31 +101,35 @@ int main (int argc, char *argv[]) {
         printf("Unable to send message\n");
         return -1;
     }
+    printf("Connection started!!\n");
 
     //Lab 2: create packet and create txt file
     FILE *fptr;
     while(true){
+        memset(client_message, '\0', sizeof(client_message));
         if(recvfrom(socket_desc, client_message, sizeof(client_message), 0,
          (struct sockaddr*)&client_addr, &client_struct_length) < 0){
             printf("Error while receiving server's msg\n");
             return -1;
         }
+        printf("bytes: %s\n",client_message);
         struct packet *curr_packet = message_to_packet(client_message);
         if(curr_packet->frag_no == 1){
-            fptr = fopen(curr_packet->filename,"w");
+            fptr = fopen(curr_packet->filename,"a");
         }
         //write to file
         fwrite(curr_packet->filedata, sizeof(char), curr_packet->size, fptr);
 
         // ACK
-        create_ack_message(&curr_packet, server_message);
-
+        // create_ack_message(&curr_packet, server_message);
+        strcpy(server_message, "ACK");
         // ACK sending
         if(sendto(socket_desc, server_message, strlen(server_message), 0,
             (struct sockaddr*)&client_addr, client_struct_length) < 0){
             printf("Unable to send message\n");
             return -1;
         }
+        printf("sended ack\n");
 
         // end condition
         if (curr_packet->frag_no == curr_packet->total_frag) {

@@ -18,9 +18,13 @@ struct packet {
     char filedata[1000];  
 };
 
-char* packet_to_string(struct packet* packet, char* result) {
-    memset(result, 0, 1100);
+char* packet_to_string(struct packet* packet) {
 
+    char *result = malloc(sizeof(char)*1000);
+
+    printf("start packet_to_string");
+    memset(result, 0, 1100);
+    
     int cursor = 0;
     sprintf(result, "%d", packet -> total_frag);
     cursor = strlen(result);
@@ -43,10 +47,13 @@ char* packet_to_string(struct packet* packet, char* result) {
     ++cursor;
 
     memcpy(result + cursor, packet -> filedata, sizeof(char) * 1000);
+    printf("end packet_to_string");
+    return result;
 }
 
 
 struct packet *message_to_packet(char *message){
+    printf("mtop");
     struct packet *new_packet = malloc(sizeof(struct packet));
     unsigned int total_frag, frag_no, size;
     char filename[FILENAME_MAX];
@@ -65,6 +72,7 @@ struct packet *message_to_packet(char *message){
     start = strchr(start, ':') + 1;
     start = strchr(start, ':') + 1;
     memcpy(new_packet->filedata, start, new_packet->size);
+    printf("mtop");
     return new_packet;
     
 }
