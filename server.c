@@ -6,8 +6,8 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
-#include <fcntl.h> // for open
-#include <unistd.h> // for close
+#include <fcntl.h>
+#include <unistd.h>
 
 int main (int argc, char *argv[]) {
     if (argc != 2){
@@ -16,6 +16,7 @@ int main (int argc, char *argv[]) {
     }
 
     int port = atoi(argv[1]);
+    printf(argv[1]);
 
     int socket_desc;
     struct sockaddr_in server_addr, client_addr;
@@ -26,7 +27,7 @@ int main (int argc, char *argv[]) {
     memset(client_message, '\0', sizeof(client_message));
 
 
-    if(socket_desc = socket(AF_INET, SOCK_DGRAM, 0)<0){
+    if((socket_desc = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))<0){
         printf("Error: socket()\n");
         return -1;
     }
@@ -38,7 +39,7 @@ int main (int argc, char *argv[]) {
 
     // Binding
 
-    if(bind(socket_desc, (struct sockaddr*)&server_addr, sizeof(server_addr))<0){
+    if((bind(socket_desc, (struct sockaddr *) &server_addr, sizeof(server_addr)))<0){
         printf("Error: bind()\n");
         return -1;
     }
@@ -51,7 +52,7 @@ int main (int argc, char *argv[]) {
     }
 
     // Respond to Client
-    if(strcmp(client_message, "ftp")){
+    if(strcmp(client_message, "ftp") == 0){
         strcpy(server_message, "yes");
     }
     else{

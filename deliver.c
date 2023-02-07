@@ -67,11 +67,13 @@ int main(int argc, char *argv[]){
     }
     
     // Receive the server's response:
-    if(recvfrom(socket_desc, server_message, sizeof(server_message), 0,
-         (struct sockaddr*)&server_addr, &server_struct_length) < 0){
+    int num;
+    if((num = recvfrom(socket_desc, server_message, sizeof(server_message), 0,
+         (struct sockaddr*)&server_addr, &server_struct_length)) < 0){
         printf("Error while receiving server's msg\n");
         return -1;
     }
+    printf("%d\n",num);
     
     if(strcmp(server_message, "yes") == 0){
         printf("Server's response: %s\n", server_message);
