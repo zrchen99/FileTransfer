@@ -1,16 +1,70 @@
 #include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
+#include <sys/stat.h>
+#include <string.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <unistd.h>
 #include <netdb.h>
+#include <fcntl.h>
+#include <stdbool.h>
+#include <dirent.h>
+#include <time.h>
+
+#include "packet.h";
+
+void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
+
+    FILE *fp;
+    if((fp = fopen(filename, "r")) == NULL) {
+        fprintf(stderr, "Can't open file %s\n", filename);
+        exit(1);
+    }
+    printf("Successfully opened file %s\n", filename);
+
+    fseek(fp, 0, SEEK_END);
+
+    int size = ftell(fp);
+
+    int num_frag = size / 1000;
+    if (1000 * num_frag < size) {
+        num_frag++;
+    }
+
+    fseek(fp, 0, SEEK_SET);
+
+    struct packet* fragments = (struct packet*)malloc(sizeof(struct packet) * num_frag);
+
+    for (int i = 0; i < num_frag; i++){
+        memset(fragments[i].filedata, 0, sizeof(fragments[i].filedata));
+        fread(fragments[i].filedata, sizeof(char), 1000, fp);
+        fragments[i].total_frag = num_frag;
+        fragments[i].frag_no = i+1;
+        int frag_size = 1000;
+        if (i == num_frag - 1) {
+            frag_size = size % 1000;
+        }
+        fragments[i].size = frag_size;
+        fragments[i].filename = filename;
+
+    }
+
+    for (int i = 0; i < num_frag; i++) {
+        int bytes = 0;
+        char* message = packet_to_string(&fragments[i], &size);
+        if (sendto(socket_desc, message, bytes, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) <= 0) {
+            syserror("sendto");
+            exit(1);
+        }
+
+        
+
+        
+    }
+
+}
 
 int main(int argc, char *argv[]){
     if (argc != 3){

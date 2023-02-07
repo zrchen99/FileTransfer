@@ -1,13 +1,52 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <arpa/inet.h>
+#include <stdbool.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+
 struct packet {  
     unsigned int total_frag;  
     unsigned int frag_no; 
     unsigned int size; 
     char* filename; 
     char filedata[1000];  
-} packet;
+};
+
+char* packet_to_string(struct packet* packet, char* result) {
+    memset(result, 0, 1100);
+
+    int cursor = 0;
+    sprintf(result, "%d", packet -> total_frag);
+    cursor = strlen(result);
+    memcpy(result + cursor, ":", sizeof(char));
+    ++cursor;
+    
+    sprintf(result + cursor, "%d", packet -> frag_no);
+    cursor = strlen(result);
+    memcpy(result + cursor, ":", sizeof(char));
+    ++cursor;
+
+    sprintf(result + cursor, "%d", packet -> size);
+    cursor = strlen(result);
+    memcpy(result + cursor, ":", sizeof(char));
+    ++cursor;
+
+    sprintf(result + cursor, "%s", packet -> filename);
+    cursor += strlen(packet -> filename);
+    memcpy(result + cursor, ":", sizeof(char));
+    ++cursor;
+
+    memcpy(result + cursor, packet -> filedata, sizeof(char) * 1000);
+}
 
 struct packet *message_to_packet(char *message){
-    struct packet *new_packet = malloc(sizeof(packet));
+    struct packet *new_packet = (struct packet*)malloc(sizeof(struct packet));
     unsigned int total_frag, frag_no, size;
     char filename[FILENAME_MAX];
     sscanf(message, "%d:%d:%d:%s:[.]", &total_frag, &frag_no, &size, filename);
