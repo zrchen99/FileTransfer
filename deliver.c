@@ -17,6 +17,7 @@
 
 void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
 
+
     FILE *fp;
     if((fp = fopen(filename, "r")) == NULL) {
         fprintf(stderr, "Can't open file %s\n", filename);
@@ -51,18 +52,30 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
 
     }
 
+    char server_message[1024];
+    memset(server_message, '\0', sizeof(server_message));
+
     for (int i = 0; i < num_frag; i++) {
         int bytes = 0;
         char* message = packet_to_string(&fragments[i], &size);
+        clock_t start = clock();
         if (sendto(socket_desc, message, bytes, 0, (struct sockaddr *) &server_addr, sizeof(server_addr)) <= 0) {
-            syserror("sendto");
+            printf("Error while sending server msg\n");
             exit(1);
         }
-
-        
-
+        if (recvfrom(socket_desc, server_message, sizeof(server_message), 0,
+         (struct sockaddr*)&server_addr, sizeof(server_addr) < 0)){
+            printf("Error while receiving server's msg\n");
+            return -1;
+        }
+        clock_t end = clock();
+        float seconds = (float)(end - start) / CLOCKS_PER_SEC;
+        printf("RTT from client to server = %f/n", seconds);
         
     }
+    printf("File Transmission Finished\n");
+    fclose(fp);
+    free(fragments);
 
 }
 
@@ -132,6 +145,8 @@ int main(int argc, char *argv[]){
     if(strcmp(server_message, "yes") == 0){
         printf("Server's response: %s\n", server_message);
         printf("A file transfer can start.\n");
+
+        send_file(filename, socket_desc, server_addr);
     }
     else{
         return -1;
