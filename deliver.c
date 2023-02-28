@@ -42,18 +42,14 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
     struct packet* fragments = (struct packet*)malloc(sizeof(struct packet) * num_frag);
 
     for (int i = 0; i < num_frag; i++){
+        memset(fragments[i].filedata, 0, sizeof(fragments[i].filedata));
+        fread(fragments[i].filedata, sizeof(char), 1000, fp);
+        fragments[i].total_frag = num_frag;
+        fragments[i].frag_no = i+1;
         int frag_size = 1000;
         if (i == num_frag - 1) {
             frag_size = size % 1000;
         }
-        memset(fragments[i].filedata, 0, sizeof(fragments[i].filedata));
-        if (i < num_frag) {
-            fread(fragments[i].filedata, sizeof(char), 1000, fp);
-        } else {
-            fread(fragments[i].filedata, sizeof(char), frag_size, fp);
-        }
-        fragments[i].total_frag = num_frag;
-        fragments[i].frag_no = i+1;
         fragments[i].size = frag_size;
         fragments[i].filename = filename;
     
@@ -72,15 +68,14 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
     }
 
     for (int i = 0; i < num_frag; i++) {
-        int size = 0;
         int bytes = 0;
 
-        char* message = packet_to_string(&fragments[i], &size);
+        char* message = packet_to_string(&fragments[i]);
         printf("%s\n", message);
 
 
         clock_t start = clock();
-        if ((bytes = sendto(socket_desc, message, size, 0, (struct sockaddr *) &server_addr, sizeof(server_addr))) <= 0) {
+        if ((bytes = sendto(socket_desc, message, strlen(message), 0, (struct sockaddr *) &server_addr, sizeof(server_addr))) <= 0) {
             printf("Error while sending server msg\n");
             exit(1);
         }
@@ -91,9 +86,17 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
         int max_resent = 10;
         while((num = recvfrom(socket_desc, server_message, sizeof(server_message), 0,
             (struct sockaddr*)&server_addr, &server_struct_length)) < 0){
+            clock_t RTT = clock() - start;
+            RTT_estimation = 0.875*RTT_estimation + ((double)RTT/8);
+            RTT_deviation = 0.75*RTT_deviation + 0.25*abs(RTT_estimation-RTT);
+            timeout.tv_usec = RTT_estimation + 4*RTT_deviation;
+            if (setsockopt(socket_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
+                printf("Setsockopt Error!\n");
+                exit(1);
+            }
             printf("Timeout or Error when trying to  received packet from server. frag_no: %d\n", i+1);
             printf("Re-sending the packet....\n");
-            if ((bytes = sendto(socket_desc, message, size, 0, (struct sockaddr *) &server_addr, sizeof(server_addr))) <= 0) {
+            if ((bytes = sendto(socket_desc, message, strlen(message), 0, (struct sockaddr *) &server_addr, sizeof(server_addr))) <= 0) {
                 printf("Error while sending server msg\n");
                 exit(1);
             }
