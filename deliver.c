@@ -42,14 +42,18 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
     struct packet* fragments = (struct packet*)malloc(sizeof(struct packet) * num_frag);
 
     for (int i = 0; i < num_frag; i++){
-        memset(fragments[i].filedata, 0, sizeof(fragments[i].filedata));
-        fread(fragments[i].filedata, sizeof(char), 1000, fp);
-        fragments[i].total_frag = num_frag;
-        fragments[i].frag_no = i+1;
         int frag_size = 1000;
         if (i == num_frag - 1) {
             frag_size = size % 1000;
         }
+        memset(fragments[i].filedata, 0, sizeof(fragments[i].filedata));
+        if (i < num_frag) {
+            fread(fragments[i].filedata, sizeof(char), 1000, fp);
+        } else {
+            fread(fragments[i].filedata, sizeof(char), frag_size, fp);
+        }
+        fragments[i].total_frag = num_frag;
+        fragments[i].frag_no = i+1;
         fragments[i].size = frag_size;
         fragments[i].filename = filename;
     
@@ -86,7 +90,7 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
         int max_resent = 10;
         while((num = recvfrom(socket_desc, server_message, sizeof(server_message), 0,
             (struct sockaddr*)&server_addr, &server_struct_length)) < 0){
-            printf("Timeout or Error when trying to  received packet from server. frag_no: %d\n", i);
+            printf("Timeout or Error when trying to  received packet from server. frag_no: %d\n", i+1);
             printf("Re-sending the packet....\n");
             if ((bytes = sendto(socket_desc, message, strlen(message), 0, (struct sockaddr *) &server_addr, sizeof(server_addr))) <= 0) {
                 printf("Error while sending server msg\n");
@@ -111,7 +115,7 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
             printf("Setsockopt Error!\n");
             exit(1);
         }
-        printf("timeout: %lu\n", RTT_estimation + 4*RTT_deviation);
+        printf("timeout: %d\n", RTT_estimation + 4*RTT_deviation);
         float seconds = (float)(end - start) / CLOCKS_PER_SEC;
         printf("RTT from client to server = %f/n", seconds);
         printf("%s\n",server_message);
