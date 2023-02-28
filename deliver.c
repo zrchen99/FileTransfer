@@ -72,14 +72,15 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
     }
 
     for (int i = 0; i < num_frag; i++) {
+        int size = 0;
         int bytes = 0;
 
-        char* message = packet_to_string(&fragments[i]);
+        char* message = packet_to_string(&fragments[i], &size);
         printf("%s\n", message);
 
 
         clock_t start = clock();
-        if ((bytes = sendto(socket_desc, message, strlen(message), 0, (struct sockaddr *) &server_addr, sizeof(server_addr))) <= 0) {
+        if ((bytes = sendto(socket_desc, message, size, 0, (struct sockaddr *) &server_addr, sizeof(server_addr))) <= 0) {
             printf("Error while sending server msg\n");
             exit(1);
         }
@@ -92,7 +93,7 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
             (struct sockaddr*)&server_addr, &server_struct_length)) < 0){
             printf("Timeout or Error when trying to  received packet from server. frag_no: %d\n", i+1);
             printf("Re-sending the packet....\n");
-            if ((bytes = sendto(socket_desc, message, strlen(message), 0, (struct sockaddr *) &server_addr, sizeof(server_addr))) <= 0) {
+            if ((bytes = sendto(socket_desc, message, size, 0, (struct sockaddr *) &server_addr, sizeof(server_addr))) <= 0) {
                 printf("Error while sending server msg\n");
                 exit(1);
             }
