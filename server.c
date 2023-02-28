@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+int last_frag_no = 0;
 
 struct packet {  
     unsigned int total_frag;  
@@ -112,22 +113,22 @@ int main (int argc, char *argv[]) {
             printf("Error while receiving server's msg\n");
             return -1;
         }
-        printf("bytes: %s\n",client_message);
         struct packet *curr_packet = message_to_packet(client_message);
-
+        printf("last frag: %d, curr frag: %d\n",last_frag_no, curr_packet->frag_no);
+        printf("bytes: %s\n",client_message);
         if(fptr == NULL){
             fptr = fopen(curr_packet->filename,"wb");
         }
         
-        // Randomly drop the packet to simulate the real world situation
+        //Randomly drop the packet to simulate the real world situation
         int drop_rate = 0.01;
-        if(rand()%100<(drop_rate*100)){
+        if(abs(rand()%100)<(drop_rate*100) || (curr_packet->frag_no == last_frag_no)){
             printf("Packet Droped: %d\n", curr_packet->frag_no);
             continue;
         }
 
-
         fwrite(curr_packet->filedata, sizeof(char), curr_packet->size, fptr);
+        last_frag_no = curr_packet->frag_no;
 
         // ACK
         // create_ack_message(&curr_packet, server_message);
