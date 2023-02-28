@@ -15,6 +15,9 @@
 
 #include "packet.h";
 
+clock_t RTT_estimation;
+clock_t RTT_deviation;
+
 void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
 
     socklen_t server_struct_length = sizeof(server_addr);
@@ -56,11 +59,21 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
     char server_message[1024];
     memset(server_message, '\0', sizeof(server_message));
 
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 100000; 
+    if (setsockopt(socket_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
+        printf("Setsockopt Error!\n");
+        return -1;
+    }
+
     for (int i = 0; i < num_frag; i++) {
         int bytes = 0;
 
         char* message = packet_to_string(&fragments[i]);
         printf("%s\n", message);
+
+
         clock_t start = clock();
         if ((bytes = sendto(socket_desc, message, strlen(message), 0, (struct sockaddr *) &server_addr, sizeof(server_addr))) <= 0) {
             printf("Error while sending server msg\n");
@@ -76,6 +89,16 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
         }
         printf("%d\n",num);
         clock_t end = clock();
+
+
+        clock_t curr_RTT = end - start;
+        RTT_estimation = 0.875*RTT_estimation + ((double)curr_RTT/8);
+        RTT_deviation = 0.75*RTT_deviation + 0.25*abs(RTT_estimation-curr_RTT);
+        timeout.tv_usec = RTT_estimation + 4*RTT_deviation;
+        if (setsockopt(socket_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
+            printf("Setsockopt Error!\n");
+            return -1;
+        }
         float seconds = (float)(end - start) / CLOCKS_PER_SEC;
         printf("RTT from client to server = %f/n", seconds);
         printf("%s\n",server_message);
@@ -134,6 +157,9 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
+    // Calculate the first RTT
+    clock_t start, end;
+    start = clock();
     // Send the message to server:
     if(sendto(socket_desc, "ftp", strlen("ftp"), 0,
          (struct sockaddr*)&server_addr, server_struct_length) < 0){
@@ -148,6 +174,10 @@ int main(int argc, char *argv[]){
         printf("Error while receiving server's msg\n");
         return -1;
     }
+    end = clock();
+    RTT_estimation = end-start;
+    RTT_deviation = end-start;
+
     printf("%d\n",num);
     
     if(strcmp(server_message, "yes") == 0){

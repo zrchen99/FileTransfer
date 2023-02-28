@@ -104,7 +104,7 @@ int main (int argc, char *argv[]) {
     printf("Connection started!!\n");
 
     //Lab 2: create packet and create txt file
-    FILE *fptr;
+    FILE *fptr = NULL;
     while(true){
         memset(client_message, '\0', sizeof(client_message));
         if(recvfrom(socket_desc, client_message, sizeof(client_message), 0,
@@ -114,10 +114,19 @@ int main (int argc, char *argv[]) {
         }
         printf("bytes: %s\n",client_message);
         struct packet *curr_packet = message_to_packet(client_message);
-        if(curr_packet->frag_no == 1){
-            fptr = fopen(curr_packet->filename,"a");
+
+        if(fptr = NULL){
+            fptr = fopen(curr_packet->filename,"wb");
         }
-        //write to file
+        
+        // Randomly drop the packet to simulate the real world situation
+        int drop_rate = 0.01
+        if(rand()%100<(drop_rate*100)){
+            printf("Packet Droped: %d\n", curr_packet->frag_no);
+            continue;
+        }
+
+
         fwrite(curr_packet->filedata, sizeof(char), curr_packet->size, fptr);
 
         // ACK
