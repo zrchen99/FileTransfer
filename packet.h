@@ -18,7 +18,7 @@ struct packet {
     char filedata[1000];  
 };
 
-char* packet_to_string(struct packet* packet, int* size) {
+char* packet_to_string(struct packet* packet) {
 
     char *result = malloc(sizeof(char)*1000);
 
@@ -47,14 +47,6 @@ char* packet_to_string(struct packet* packet, int* size) {
     ++cursor;
 
     memcpy(result + cursor, packet -> filedata, sizeof(char) * 1000);
-
-    *size = strlen(result);
-    int i = strlen(result);
-    for (int j = 0; j < packet -> size; ++j){
-        memcpy(result + cursor + j, packet -> filedata, sizeof(char))
-        ++i;
-    }
-    *size += packet -> size;
     printf("end packet_to_string");
     return result;
 }
