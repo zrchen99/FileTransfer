@@ -13,7 +13,7 @@
 #include <dirent.h>
 #include <time.h>
 
-#include "packet.h";
+#include "packet.h"
 
 clock_t RTT_estimation;
 clock_t RTT_deviation;
@@ -64,7 +64,7 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
     timeout.tv_usec = 100000; 
     if (setsockopt(socket_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
         printf("Setsockopt Error!\n");
-        return -1;
+        exit(1);
     }
 
     for (int i = 0; i < num_frag; i++) {
@@ -109,8 +109,9 @@ void send_file(char* filename, int socket_desc, struct sockaddr_in server_addr){
         timeout.tv_usec = RTT_estimation + 4*RTT_deviation;
         if (setsockopt(socket_desc, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
             printf("Setsockopt Error!\n");
-            return -1;
+            exit(1);
         }
+        printf("timeout: %lu\n", RTT_estimation + 4*RTT_deviation);
         float seconds = (float)(end - start) / CLOCKS_PER_SEC;
         printf("RTT from client to server = %f/n", seconds);
         printf("%s\n",server_message);

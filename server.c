@@ -115,12 +115,12 @@ int main (int argc, char *argv[]) {
         printf("bytes: %s\n",client_message);
         struct packet *curr_packet = message_to_packet(client_message);
 
-        if(fptr = NULL){
+        if(fptr == NULL){
             fptr = fopen(curr_packet->filename,"wb");
         }
         
         // Randomly drop the packet to simulate the real world situation
-        int drop_rate = 0.01
+        int drop_rate = 0.01;
         if(rand()%100<(drop_rate*100)){
             printf("Packet Droped: %d\n", curr_packet->frag_no);
             continue;
@@ -143,7 +143,10 @@ int main (int argc, char *argv[]) {
         // end condition
         if (curr_packet->frag_no == curr_packet->total_frag) {
             printf("Completion!\n");
-            close(fptr);
+            if(fptr != NULL){
+                close(fptr);
+            }
+
             free(curr_packet);
             break;
         }
